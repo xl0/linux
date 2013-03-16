@@ -25,6 +25,8 @@
 #define dprintk(x...)
 #endif
 
+#define ACT8600_Q_REG	0xb0
+
 extern void i2c_jz_setclk(struct i2c_client *client,unsigned long i2cclk);
 
 
@@ -122,6 +124,47 @@ static int act8600_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 #endif
 	return 0;
 }
+
+
+int act8600_q_set(int q, bool enable)
+{
+	u8 tmp;
+	int ret;
+
+	if (q < 1 || q > 3)
+		return -EINVAL;
+
+	if (!enable) {
+		ret = act8600_write_reg(ACT8600_Q_REG, 0);
+		WARN_ON(ret < 0);
+		return ret;
+	}
+
+	/* When enabling a switch, the other two must me disabled.
+	 * q1,2,3 are bits 7, 6, 5. */
+
+	ret = act8600_write_reg(ACT8600_Q_REG, (1 << (8 - q)));
+	if (ret < 0) {
+		__WARN();
+		return ret;
+	}
+
+	/* bits 4 and 3 are "status bits" for q1 and a2. 0 -> success. */
+	ret = act8600_read_reg(ACT8600_Q_REG, &tmp);
+	if (ret < 0) {
+		__WARN();
+		return ret;
+	}
+
+	if (!(tmp & (1 << (5 - q)))) {
+		__WARN();
+		return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(act8600_q_set);
+
 
 static int act8600_remove(struct i2c_client *client)
 {
