@@ -203,13 +203,11 @@
  * Define macros for UART_LSR
  * UART Line Status Register
  */
-#define UART_LSR_DR	(1 << 0)	/* 0: receive FIFO is empty  1: receive data is ready */
 #define UART_LSR_ORER	(1 << 1)	/* 0: no overrun error */
 #define UART_LSR_PER	(1 << 2)	/* 0: no parity error */
 #define UART_LSR_FER	(1 << 3)	/* 0; no framing error */
 #define UART_LSR_BRK	(1 << 4)	/* 0: no break detected  1: receive a break signal */
 #define UART_LSR_TDRQ	(1 << 5)	/* 1: transmit FIFO half "empty" */
-#define UART_LSR_TEMT	(1 << 6)	/* 1: transmit FIFO and shift registers empty */
 #define UART_LSR_RFER	(1 << 7)	/* 0: no receive error  1: receive error in FIFO mode */
 
 
