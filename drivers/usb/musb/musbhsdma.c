@@ -455,6 +455,7 @@ static u8 dma_controller_fetch_intr(struct dma_controller *c)
 
 irqreturn_t musb_call_dma_controller_irq(int irq, struct musb *musb)
 {
+	MY_TRACE;
 	if (!musb->b_dma_share_usb_irq)
 		return IRQ_NONE;
 

@@ -4090,6 +4090,7 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 				goto fail;
 			}
 			if (r) {
+				WARN_ON(1);
 				dev_err(&udev->dev,
 					"device descriptor read/64, error %d\n",
 					r);

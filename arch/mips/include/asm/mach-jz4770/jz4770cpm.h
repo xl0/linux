@@ -271,6 +271,12 @@
 /* OTG parameter control register(USBPCR) */
 #define USBPCR_USB_MODE         BIT31
 #define USBPCR_AVLD_REG         BIT30
+/* p1 = 1: idpullup always active.
+ * p1 = 0, p0 = 1: active when usb is suspended.
+ * p1 = 0, p0 = 0: let the otg controller decide.
+ */
+#define USBPCR_IDPULLUP1	BIT29
+#define USBPCR_IDPULLUP0	BIT28
 #define USBPCR_INCRM            BIT27   /* INCR_MASK bit */
 #define USBPCR_CLK12_EN         BIT26
 #define USBPCR_COMMONONN        BIT25
@@ -707,6 +713,88 @@ do {							\
 
 /**************remove me if android's kernel support these operations********end*********  */
 #define __cpm_start_bdma()	(REG_CPM_CLKGR1 &= ~CLKGR1_BDMA)
+
+extern int jz_pm_init(void);
+
+static inline void usbpcr_debug(void)
+{
+	char buf[512];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+	u32 tmp = REG_CPM_USBPCR;
+
+	if (tmp & USBPCR_USB_MODE) {
+		bufp += snprintf(bufp, bufend - bufp, "\tUSB mode: OTG\n");
+	} else {
+		bufp += snprintf(bufp, bufend - bufp, "\tUSB mode: Device\n");
+	}
+	if (tmp & USBPCR_AVLD_REG)
+		bufp += snprintf(bufp, bufend - bufp, "\tSet 'avalid'\n");
+	if (tmp & USBPCR_IDPULLUP1) {
+		bufp += snprintf(bufp, bufend - bufp, "\tID pullup - Alwaya active\n");
+	} else {
+		if (tmp & USBPCR_IDPULLUP0) {
+			bufp += snprintf(bufp, bufend - bufp, "\tID pullup - always active when usb suspend\n");
+		} else {
+			bufp += snprintf(bufp, bufend - bufp, "\tID pullup - from OTG controller\n");
+		}
+	}
+
+	if (tmp & USBPCR_INCRM) {
+		bufp += snprintf(bufp, bufend - bufp, "\tincr transfer - disabled\n");
+	} else {
+		bufp += snprintf(bufp, bufend - bufp, "\tincr transfer - enabled\n");
+	}
+		
+	if (tmp & USBPCR_CLK12_EN)
+		bufp += snprintf(bufp, bufend - bufp, "\tOTG PHY reference clock enable\n");
+	if (tmp & USBPCR_COMMONONN) {
+		bufp += snprintf(bufp, bufend - bufp, "\tThe common blocks are powered down in suspend mode\n");
+	} else {
+		bufp += snprintf(bufp, bufend - bufp, "\tThe common blocks remain powered in suspend mode\n");
+	}
+	if (tmp & USBPCR_VBUSVLDEXT)
+		bufp += snprintf(bufp, bufend - bufp, "\tPHY VBUSVLDEXT\n");
+
+	if (tmp & USBPCR_VBUSVLDEXTSEL)
+		bufp += snprintf(bufp, bufend - bufp, "\tPHY VBUSVLDEXTSEL\n");
+
+	if (tmp & USBPCR_POR)
+		bufp += snprintf(bufp, bufend - bufp, "\tPHY Power on reset\n");
+	if (tmp & USBPCR_SIDDQ)
+		bufp += snprintf(bufp, bufend - bufp, "\tPHY analog blocks power down signal\n");
+
+	if (tmp & USBPCR_OTG_DISABLE)
+		bufp += snprintf(bufp, bufend - bufp, "\tDisable\n");
+
+	bufp += snprintf(bufp, bufend - bufp, "\tDisconnect threshold adj = 0x%x\n",
+		(tmp & USBPCR_COMPDISTUNE_MASK) >> USBPCR_COMPDISTUNE_LSB);
+
+	bufp += snprintf(bufp, bufend - bufp, "\tVBUS valid threshold adj = 0x%x\n",
+		(tmp & USBPCR_OTGTUNE_MASK) >> USBPCR_OTGTUNE_LSB);
+
+	bufp += snprintf(bufp, bufend - bufp, "\tSquelch threshold adj = 0x%x\n",
+		(tmp &  USBPCR_SQRXTUNE_MASK) >>  USBPCR_SQRXTUNE_LSB);
+ 
+	bufp += snprintf(bufp, bufend - bufp, "\tFS/LS source impedance adj = 0x%x\n",
+		(tmp & USBPCR_TXFSLSTUNE_MASK) >> USBPCR_TXFSLSTUNE_LSB);
+
+	bufp += snprintf(bufp, bufend - bufp, "\tTXHSXVTUNE=0x%x\n",
+		(tmp & USBPCR_TXRISETUNE_MASK) >> USBPCR_TXRISETUNE_LSB);
+
+	bufp += snprintf(bufp, bufend - bufp, "\tHS DC voltage level adj =0x%x\n",
+		(tmp & USBPCR_TXVREFTUNE_MASK) >> USBPCR_TXVREFTUNE_LSB);
+
+	if (tmp & USBPCR_TXPREEMPHTUNE) {
+		bufp += snprintf(bufp, bufend - bufp, "\tHS transmitter Pre-emphasis enabled\n");
+	} else {
+		bufp += snprintf(bufp, bufend - bufp, "\tHS transmitter Pre-emphasis disabled\n");
+	}
+
+	*bufp = '\0';
+	printk(KERN_NOTICE "USBPCR = 0x%x:\n%s", tmp, buf);
+
+}
 
 #endif /* __MIPS_ASSEMBLER */
 

@@ -80,7 +80,7 @@ static void musb_port_suspend(struct musb *musb, bool do_suspend)
 		musb->port1_status |= USB_PORT_STAT_SUSPEND;
 		switch (musb->xceiv->state) {
 		case OTG_STATE_A_HOST:
-			musb->xceiv->state = OTG_STATE_A_SUSPEND;
+			usb_phy_chstate(musb->xceiv, OTG_STATE_A_SUSPEND);
 			musb->is_active = otg->host->b_hnp_enable;
 			if (musb->is_active)
 				mod_timer(&musb->otg_timer, jiffies
@@ -89,7 +89,7 @@ static void musb_port_suspend(struct musb *musb, bool do_suspend)
 			musb_platform_try_idle(musb, 0);
 			break;
 		case OTG_STATE_B_HOST:
-			musb->xceiv->state = OTG_STATE_B_WAIT_ACON;
+			usb_phy_chstate(musb->xceiv, OTG_STATE_B_WAIT_ACON);
 			musb->is_active = otg->host->b_hnp_enable;
 			musb_platform_try_idle(musb, 0);
 			break;
@@ -189,17 +189,17 @@ void musb_root_disconnect(struct musb *musb)
 	switch (musb->xceiv->state) {
 	case OTG_STATE_A_SUSPEND:
 		if (otg->host->b_hnp_enable) {
-			musb->xceiv->state = OTG_STATE_A_PERIPHERAL;
+			usb_phy_chstate(musb->xceiv, OTG_STATE_A_PERIPHERAL);
 			musb->g.is_a_peripheral = 1;
 			break;
 		}
 		/* FALLTHROUGH */
 	case OTG_STATE_A_HOST:
-		musb->xceiv->state = OTG_STATE_A_WAIT_BCON;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_A_WAIT_BCON);
 		musb->is_active = 0;
 		break;
 	case OTG_STATE_A_WAIT_VFALL:
-		musb->xceiv->state = OTG_STATE_B_IDLE;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_B_IDLE);
 		break;
 	default:
 		dev_dbg(musb->controller, "host disconnect (%s)\n",
@@ -339,7 +339,7 @@ int musb_hub_control(
 			musb->port1_status |= USB_PORT_STAT_C_SUSPEND << 16;
 			usb_hcd_poll_rh_status(musb_to_hcd(musb));
 			/* NOTE: it might really be A_WAIT_BCON ... */
-			musb->xceiv->state = OTG_STATE_A_HOST;
+			usb_phy_chstate(musb->xceiv, OTG_STATE_A_HOST);
 		}
 
 		put_unaligned(cpu_to_le32(musb->port1_status

@@ -152,6 +152,7 @@ void cpm_start_clock(clock_gate_module module_name)
                 default:
                         printk("WARNING: can NOT start the %d's clock\n",
                                         module_name);
+			__WARN();
                         break;
        }
 }
@@ -457,6 +458,7 @@ unsigned int cpm_get_clock(cgu_clock clock_name)
 
         default:
                 printk("WARNING: can NOT get clock %d!\n", clock_name);
+		__WARN();
                 clock_hz = exclk;
                 break;
         }

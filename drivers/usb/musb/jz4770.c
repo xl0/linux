@@ -17,6 +17,7 @@
 #include <linux/gpio.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/nop-usb-xceiv.h>
+#include <linux/act8600_power.h>
 
 #include <asm/mach-jz4770/board-gcw0.h>
 #include <asm/mach-jz4770/jz4770cpm.h>
@@ -62,7 +63,7 @@ static inline void jz_musb_set_device_only_mode(void)
 	printk(KERN_INFO "jz4760: Device only mode.\n");
 
 	/* Device Mode. */
-	REG_CPM_USBPCR &= ~(1 << 31);
+	REG_CPM_USBPCR &= ~(USBPCR_USB_MODE);
 
 	REG_CPM_USBPCR |= USBPCR_VBUSVLDEXT;
 }
@@ -74,15 +75,23 @@ static inline void jz_musb_set_normal_mode(void)
 	__gpio_as_otg_drvvbus();
 
 	/* OTG Mode. */
-	REG_CPM_USBPCR |= (1 << 31);
+	REG_CPM_USBPCR |= USBPCR_USB_MODE;
+	REG_CPM_USBPCR &= ~(USBPCR_VBUSVLDEXT |
+				USBPCR_VBUSVLDEXTSEL |
+				USBPCR_OTG_DISABLE);
 
-	REG_CPM_USBPCR &= ~((1 << 24) | (1 << 23) | (1 << 20));
-
-	REG_CPM_USBPCR |= ((1 << 28) | (1 << 29));
+	REG_CPM_USBPCR |= (USBPCR_IDPULLUP0 | USBPCR_IDPULLUP1);
 }
 
 static inline void jz_musb_init_regs(struct musb *musb)
 {
+
+	printk(KERN_NOTICE "Before jz_musb_init_regs:\n");
+	usbpcr_debug();
+
+
+	REG_CPM_USBPCR = 
+
 	/* fil */
 	REG_CPM_USBVBFIL = 0x80;
 
@@ -93,17 +102,23 @@ static inline void jz_musb_init_regs(struct musb *musb)
 	REG_CPM_USBRDT |= (1 << 25);
 
 	/* TXRISETUNE & TXVREFTUNE. */
-	REG_CPM_USBPCR &= ~0x3f;
-	REG_CPM_USBPCR |= 0x35;
+//	REG_CPM_USBPCR &= ~(USBPCR_TXVREFTUNE_MASK | USBPCR_TXRISETUNE_MASK);
+
+//	REG_CPM_USBPCR |= 0x35;
 
 	jz_musb_set_normal_mode();
 
 	jz_musb_phy_reset();
+	printk(KERN_NOTICE "jz_musb_init_regs:\n");
+	usbpcr_debug();
 }
 
 static void jz_musb_set_vbus(struct musb *musb, int is_on)
 {
 	u8 devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
+	MY_TRACE;
+	WARN_ON(is_on && is_peripheral_active(musb));
+
 
 	/* HDRC controls CPEN, but beware current surges during device
 	 * connect.  They can trigger transient overcurrent conditions
@@ -113,19 +128,21 @@ static void jz_musb_set_vbus(struct musb *musb, int is_on)
 	if (is_on) {
 		musb->is_active = 1;
 		musb->xceiv->otg->default_a = 1;
-		musb->xceiv->state = OTG_STATE_A_WAIT_VRISE;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_A_WAIT_VRISE);
 		devctl |= MUSB_DEVCTL_SESSION;
 
 		MUSB_HST_MODE(musb);
+		act8600_q_set(1, 1);
 	} else {
 		musb->is_active = 0;
 
+		act8600_q_set(1, 0);
 		/* NOTE:  we're skipping A_WAIT_VFALL -> A_IDLE and
 		 * jumping right to B_IDLE...
 		 */
 
 		musb->xceiv->otg->default_a = 0;
-		musb->xceiv->state = OTG_STATE_B_IDLE;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_B_IDLE);
 		devctl &= ~MUSB_DEVCTL_SESSION;
 
 		MUSB_DEV_MODE(musb);
@@ -174,7 +191,7 @@ static void do_otg_id_pin_state(struct musb *musb)
 
 	musb->xceiv->otg->default_a = default_a;
 
-	jz_musb_set_vbus(musb, default_a);
+//	jz_musb_set_vbus(musb, default_a);
 
 	if (pin) {
 		/* B */
@@ -222,6 +239,9 @@ static int otg_id_pin_setup(struct musb *musb)
 	__gpio_as_input(GPIO_OTG_ID_PIN);
 	__gpio_disable_pull(GPIO_OTG_ID_PIN);
 
+	__gpio_as_input(OTG_HOTPLUG_PIN);
+	__gpio_disable_pull(OTG_HOTPLUG_PIN);
+
 	/* Update OTG ID PIN state. */
 	do_otg_id_pin_state(musb);
 	setup_timer(&otg_id_pin_stable_timer, otg_id_pin_stable_func, (unsigned long)musb);
@@ -254,14 +274,28 @@ static irqreturn_t jz_musb_interrupt(int irq, void *__hci)
 
 	spin_lock_irqsave(&musb->lock, flags);
 
+	MY_TRACE;
+	printk("MUSB mode: %s\n", MUSB_MODE(musb));
+	usbpcr_debug();
+	musb_power_show(musb_readb(musb->mregs, MUSB_POWER));
+	musb_devctl_show(musb_readb(musb->mregs, MUSB_DEVCTL));
+	musb_intr_rx_enable_show(musb_readb(musb->mregs, MUSB_INTRRXE));
+	musb_intr_tx_enable_show(musb_readb(musb->mregs, MUSB_INTRTXE));
+
+
 #if defined(CONFIG_USB_INVENTRA_DMA)
-	if (musb->b_dma_share_usb_irq)
+	if (musb->b_dma_share_usb_irq) 
 		rv_dma = musb_call_dma_controller_irq(irq, musb);
 #endif
 
 	musb->int_usb = musb_readb(musb->mregs, MUSB_INTRUSB);
 	musb->int_tx = musb_readw(musb->mregs, MUSB_INTRTX);
 	musb->int_rx = musb_readw(musb->mregs, MUSB_INTRRX);
+
+	musb_intrusb_show(musb->int_usb);
+	musb_intr_rx_show(musb->int_rx);
+	musb_intr_tx_show(musb->int_tx);
+
 
 	if (musb->int_usb || musb->int_tx || musb->int_rx)
 		rv_usb = musb_interrupt(musb);
@@ -274,8 +308,48 @@ static irqreturn_t jz_musb_interrupt(int irq, void *__hci)
 	return rv;
 }
 
+static ssize_t show_id(struct device *dev, struct device_attribute *attr,
+	 char *buf)
+{
+	return sprintf(buf, "%d\n", read_gpio_pin(GPIO_OTG_ID_PIN, 5000));
+}
+
+static ssize_t show_vbus(struct device *dev, struct device_attribute *attr,
+	 char *buf)
+{
+	return sprintf(buf, "%d\n", read_gpio_pin(OTG_HOTPLUG_PIN, 5000));
+}
+
+static DEVICE_ATTR(id_pin, 0666, show_id, NULL);
+static DEVICE_ATTR(vbus_pin, 0666, show_vbus, NULL);
+
+static int jz_musb_create_attrs(struct musb *musb)
+{
+	int ret;
+
+	ret = device_create_file(musb->controller, &dev_attr_id_pin);
+	if (ret)
+		goto out;
+
+	ret = device_create_file(musb->controller, &dev_attr_vbus_pin);
+	if (ret) {
+		device_remove_file(musb->controller, &dev_attr_id_pin);
+		goto out;
+	}
+out:
+	return ret;
+}
+
+static void jz_musb_remove_attrs(struct musb *musb)
+{
+	device_remove_file(musb->controller, &dev_attr_id_pin);
+	device_remove_file(musb->controller, &dev_attr_vbus_pin);
+}
+
 static int __init jz_musb_platform_init(struct musb *musb)
 {
+	int ret;
+
 	musb->xceiv = usb_get_phy(USB_PHY_TYPE_USB2);
 	if (!musb->xceiv) {
 		pr_err("HS USB OTG: no transceiver configured\n");
@@ -288,11 +362,23 @@ static int __init jz_musb_platform_init(struct musb *musb)
 	jz_musb_init_regs(musb);
 
 	/* host mode and otg(host) depend on the id pin */
-	return otg_id_pin_setup(musb);
+	ret = otg_id_pin_setup(musb);
+	if (ret)
+		goto out;
+
+	ret = jz_musb_create_attrs(musb);
+	if (ret) {
+		otg_id_pin_cleanup(musb);
+		goto out;
+	}
+out:
+	return ret;
 }
 
 static int jz_musb_platform_exit(struct musb *musb)
 {
+	jz_musb_remove_attrs(musb);
+
 	jz_musb_phy_disable();
 
 	otg_id_pin_cleanup(musb);
@@ -311,6 +397,7 @@ static void jz_musb_platform_disable(struct musb *musb)
 {
 	jz_musb_phy_disable();
 }
+
 
 static const struct musb_platform_ops jz_musb_ops = {
 	.init		= jz_musb_platform_init,

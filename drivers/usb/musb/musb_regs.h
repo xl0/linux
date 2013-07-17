@@ -35,6 +35,7 @@
 #ifndef __MUSB_REGS_H__
 #define __MUSB_REGS_H__
 
+#include "musb_core.h"
 #define MUSB_EP0_FIFOSIZE	64	/* This is non-configurable */
 
 /*
@@ -51,6 +52,32 @@
 #define MUSB_POWER_SUSPENDM	0x02
 #define MUSB_POWER_ENSUSPEND	0x01
 
+static inline void musb_power_show(u8 power)
+{
+	char buf[256];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+
+	if (power & MUSB_POWER_ENSUSPEND)
+		bufp += snprintf(bufp, bufend - bufp, "\tISO update\n");
+	if (power & MUSB_POWER_SUSPENDM)
+		bufp += snprintf(bufp, bufend - bufp, "\tSoft Conn\n");
+	if (power & MUSB_POWER_RESUME)
+		bufp += snprintf(bufp, bufend - bufp, "\tHS Enabled\n");
+	if (power & MUSB_POWER_RESET)
+		bufp += snprintf(bufp, bufend - bufp, "\tHS negotiated\n");
+	if (power & MUSB_POWER_HSMODE)
+		bufp += snprintf(bufp, bufend - bufp, "\tReset\n");
+	if (power & MUSB_POWER_HSENAB)
+		bufp += snprintf(bufp, bufend - bufp, "\tResume\n");
+	if (power & MUSB_POWER_SOFTCONN)
+		bufp += snprintf(bufp, bufend - bufp, "\tSuspend mode\n");
+	if (power & MUSB_POWER_ISOUPDATE)
+		bufp += snprintf(bufp, bufend - bufp, "\tEnable suspend mode\n");
+	*bufp = '\0';
+	printk(KERN_NOTICE "musb Power = 0x%x:\n%s", power, buf);
+}
+
 /* INTRUSB */
 #define MUSB_INTR_SUSPEND	0x01
 #define MUSB_INTR_RESUME	0x02
@@ -62,6 +89,120 @@
 #define MUSB_INTR_SESSREQ	0x40
 #define MUSB_INTR_VBUSERROR	0x80	/* For SESSION end */
 
+
+static inline void musb_intrusb_show(u8 intrusb)
+{
+	char buf[256];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+
+	if (intrusb & MUSB_INTR_VBUSERROR)
+		bufp += snprintf(bufp, bufend - bufp, "\tVbus Error\n");
+
+	if (intrusb & MUSB_INTR_SESSREQ)
+		bufp += snprintf(bufp, bufend - bufp, "\tSess Req\n");
+	if (intrusb & MUSB_INTR_DISCONNECT)
+		bufp += snprintf(bufp, bufend - bufp, "\tDisconnect\n");
+	if (intrusb & MUSB_INTR_CONNECT)
+		bufp += snprintf(bufp, bufend - bufp, "\tConnect\n");
+	if (intrusb & MUSB_INTR_SOF)
+		bufp += snprintf(bufp, bufend - bufp, "\tStart Of Frame\n");
+	if (intrusb & MUSB_INTR_RESET)
+		bufp += snprintf(bufp, bufend - bufp, "\tReset sig detected/Babble\n");
+	if (intrusb & MUSB_INTR_RESUME)
+		bufp += snprintf(bufp, bufend - bufp, "\tResume sig detected\n");
+	if (intrusb & MUSB_INTR_SUSPEND)
+		bufp += snprintf(bufp, bufend - bufp, "\tSuspend sig detected\n");
+	*bufp = '\0';
+	printk(KERN_NOTICE "musb intrUSB= 0x%x:\n%s", intrusb, buf);
+}
+
+static inline void musb_intrusb_enable_show(u8 intrusb)
+{
+	char buf[256];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+
+	if (intrusb & MUSB_INTR_VBUSERROR)
+		bufp += snprintf(bufp, bufend - bufp, "\tVbus Error\n");
+
+	if (intrusb & MUSB_INTR_SESSREQ)
+		bufp += snprintf(bufp, bufend - bufp, "\tSess Req\n");
+	if (intrusb & MUSB_INTR_DISCONNECT)
+		bufp += snprintf(bufp, bufend - bufp, "\tDisconnect\n");
+	if (intrusb & MUSB_INTR_CONNECT)
+		bufp += snprintf(bufp, bufend - bufp, "\tConnect\n");
+	if (intrusb & MUSB_INTR_SOF)
+		bufp += snprintf(bufp, bufend - bufp, "\tStart Of Frame\n");
+	if (intrusb & MUSB_INTR_RESET)
+		bufp += snprintf(bufp, bufend - bufp, "\tReset sig detected/Babble\n");
+	if (intrusb & MUSB_INTR_RESUME)
+		bufp += snprintf(bufp, bufend - bufp, "\tResume sig detected\n");
+	if (intrusb & MUSB_INTR_SUSPEND)
+		bufp += snprintf(bufp, bufend - bufp, "\tSuspend sig detected\n");
+	*bufp = '\0';
+	printk(KERN_NOTICE "musb intrUSB enable = 0x%x:\n%s", intrusb, buf);
+}
+
+static inline void musb_intr_rx_tx_show(u16 reg, char *direction)
+{
+	int i = 0;
+
+	char buf[256];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+
+	while (i <= 15) {
+		if ((reg >> i) & 1) {
+			bufp += snprintf(bufp, bufend - bufp, "\t%s EP %d fired\n",
+					direction, i);
+		}
+		i++;
+	}
+	*bufp = '\0';
+	printk(KERN_NOTICE "musb %s intr = 0x%x:\n%s", direction, reg, buf);
+}
+
+static inline void musb_intr_rx_show(u16 reg)
+{
+	musb_intr_rx_tx_show(reg, "RX");
+}
+
+static inline void musb_intr_tx_show(u16 reg)
+{
+	musb_intr_rx_tx_show(reg, "TX");
+}
+
+static inline void musb_intr_rx_tx_enable_show(u16 reg, char *direction)
+{
+	int i = 0;
+
+	char buf[256];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+
+	while (i <= 15) {
+		if ((reg >> i) & 1) {
+			bufp += snprintf(bufp, bufend - bufp, "\t%s EP %d int enabled\n",
+					direction, i);
+		}
+		i++;
+	}
+	*bufp = '\0';
+	printk(KERN_NOTICE "musb %s intr enable= 0x%x:\n%s", direction, reg, buf);
+} 
+
+
+static inline void musb_intr_rx_enable_show(u16 reg)
+{
+	musb_intr_rx_tx_enable_show(reg, "RX");
+}
+
+static inline void musb_intr_tx_enable_show(u16 reg)
+{
+	musb_intr_rx_tx_enable_show(reg, "TX");
+}
+
 /* DEVCTL */
 #define MUSB_DEVCTL_BDEVICE	0x80
 #define MUSB_DEVCTL_FSDEV	0x40
@@ -71,6 +212,47 @@
 #define MUSB_DEVCTL_HM		0x04
 #define MUSB_DEVCTL_HR		0x02
 #define MUSB_DEVCTL_SESSION	0x01
+
+static inline void musb_devctl_show(u8 devctl)
+{
+	char buf[256];
+	char *bufp = buf;
+	char *bufend = buf + sizeof (buf);
+
+	if (devctl & MUSB_DEVCTL_BDEVICE)
+		bufp += snprintf(bufp, bufend - bufp, "\tIs B-device\n");
+	if (devctl & MUSB_DEVCTL_FSDEV )
+		bufp += snprintf(bufp, bufend - bufp, "\tIs full-speed\n");
+	if (devctl & MUSB_DEVCTL_LSDEV)
+		bufp += snprintf(bufp, bufend - bufp, "\tIs low-speed\n");
+
+	if (devctl & 0x10) {
+		if (devctl & 0x08) {
+			bufp += snprintf(bufp, bufend - bufp, "\tVBUS: Above VBUS valid\n");
+		} else {
+			bufp += snprintf(bufp, bufend - bufp, "\tVBUS: Above A-Valid, below VBUS valid.\n");
+		}
+	} else {
+		if (devctl & 0x08) {
+			bufp += snprintf(bufp, bufend - bufp, "\tVBUS: Above Session end, below A-valid.\n");
+
+		} else {
+			bufp += snprintf(bufp, bufend - bufp, "\tVBUS: Below Session end\n");
+		}
+	}
+
+	if (devctl & MUSB_DEVCTL_HM)
+		bufp += snprintf(bufp, bufend - bufp, "\tHost Mode\n");
+	if (devctl & MUSB_DEVCTL_HR)
+		bufp += snprintf(bufp, bufend - bufp, "\tHost Req\n");
+	if (devctl & MUSB_DEVCTL_SESSION)
+		bufp += snprintf(bufp, bufend - bufp, "\tSession\n");
+
+	*bufp = '\0';
+	printk(KERN_NOTICE "musb Devctl = 0x%x:\n%s", devctl, buf);
+}
+
+
 
 /* MUSB ULPI VBUSCONTROL */
 #define MUSB_ULPI_USE_EXTVBUS	0x01

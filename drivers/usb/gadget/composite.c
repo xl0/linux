@@ -630,6 +630,8 @@ static int set_config(struct usb_composite_dev *cdev,
 	     usb_speed_string(gadget->speed),
 	     number, c ? c->label : "unconfigured");
 
+	WARN_ON(1);
+
 	if (!c)
 		goto done;
 

@@ -42,6 +42,7 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
+#include <asm/mach-jz4770/jz4770cpm.h>
 
 #include "musb_core.h"
 #include "musb_host.h"
@@ -216,6 +217,18 @@ musb_start_urb(struct musb *musb, int is_in, struct musb_qh *qh)
 	u8			address = usb_pipedevice(pipe);
 	int			epnum = hw_ep->epnum;
 
+	MY_TRACE;
+	printk("MUSB mode: %s\n", MUSB_MODE(musb));
+	usbpcr_debug();
+	musb_power_show(musb_readb(musb->mregs, MUSB_POWER));
+	musb_devctl_show(musb_readb(musb->mregs, MUSB_DEVCTL));
+	musb_intr_rx_enable_show(musb_readb(musb->mregs, MUSB_INTRRXE));
+	musb_intr_tx_enable_show(musb_readb(musb->mregs, MUSB_INTRTXE));
+
+#if defined(CONFIG_USB_INVENTRA_DMA)
+	if (musb->b_dma_share_usb_irq) 
+		rv_dma = musb_call_dma_controller_irq(irq, musb);
+#endif
 	/* initialize software qh state */
 	qh->offset = 0;
 	qh->segsize = 0;

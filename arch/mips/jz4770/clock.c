@@ -396,8 +396,9 @@ static int jz_clk_divided_set_rate(struct clk *clk, unsigned long rate)
 	else if (div > dclk->mask)
 		div = dclk->mask;
 
-	//printk("Updating divider: parent=%lu rate=%lu div=%i\n",
-	//       clk_get_rate(clk->parent), rate, div + 1);
+	printk("Updating divider: %s, parent=%lu (%s), rate=%lu div=%i\n",
+		clk->name, 
+	       clk_get_rate(clk->parent), clk->parent ? clk->parent->name : "", rate, div + 1);
 	jz_clk_reg_write_mask(dclk->reg, div, dclk->mask);
 
 	return 0;

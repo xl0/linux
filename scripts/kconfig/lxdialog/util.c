@@ -281,7 +281,7 @@ int init_dialog(const char *backtitle)
 	getyx(stdscr, saved_y, saved_x);
 
 	getmaxyx(stdscr, height, width);
-	if (height < 19 || width < 80) {
+	if (height < 19 || width < 10) {
 		endwin();
 		return -ERRDISPLAYTOOSMALL;
 	}

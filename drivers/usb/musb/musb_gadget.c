@@ -1950,7 +1950,8 @@ void musb_gadget_cleanup(struct musb *musb)
 		device_unregister(&musb->g.dev);
 }
 
-#ifdef CONFIG_USB_MUSB_PERIPHERAL_HOTPLUG
+//#ifdef CONFIG_USB_MUSB_PERIPHERAL_HOTPLUG
+#if 0
 static void stop_activity(struct musb *musb, struct usb_gadget_driver *driver);
 
 static int jz_musb_vbus_hotplug_event(struct notifier_block *n,
@@ -2047,7 +2048,7 @@ static int musb_gadget_start(struct usb_gadget *g,
 	uh_register_notifier(&jz_musb_vbus_hotplug_nb);
 #else
 	otg_set_peripheral(otg, &musb->g);
-	musb->xceiv->state = OTG_STATE_B_IDLE;
+	usb_phy_chstate(musb->xceiv, OTG_STATE_B_IDLE);
 #endif
 
 	spin_unlock_irqrestore(&musb->lock, flags);
@@ -2144,7 +2145,7 @@ static int musb_gadget_stop(struct usb_gadget *g,
 
 	(void) musb_gadget_vbus_draw(&musb->g, 0);
 
-	musb->xceiv->state = OTG_STATE_UNDEFINED;
+	usb_phy_chstate(musb->xceiv, OTG_STATE_UNDEFINED);
 	stop_activity(musb, driver);
 	otg_set_peripheral(musb->xceiv->otg, NULL);
 
@@ -2202,7 +2203,7 @@ void musb_g_suspend(struct musb *musb)
 	switch (musb->xceiv->state) {
 	case OTG_STATE_B_IDLE:
 		if ((devctl & MUSB_DEVCTL_VBUS) == MUSB_DEVCTL_VBUS)
-			musb->xceiv->state = OTG_STATE_B_PERIPHERAL;
+			usb_phy_chstate(musb->xceiv, OTG_STATE_B_PERIPHERAL);
 		break;
 	case OTG_STATE_B_PERIPHERAL:
 		musb->is_suspended = 1;
@@ -2252,18 +2253,18 @@ void musb_g_disconnect(struct musb *musb)
 	default:
 		dev_dbg(musb->controller, "Unhandled disconnect %s, setting a_idle\n",
 			otg_state_string(musb->xceiv->state));
-		musb->xceiv->state = OTG_STATE_A_IDLE;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_A_IDLE);
 		MUSB_HST_MODE(musb);
 		break;
 	case OTG_STATE_A_PERIPHERAL:
-		musb->xceiv->state = OTG_STATE_A_WAIT_BCON;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_A_WAIT_BCON);
 		MUSB_HST_MODE(musb);
 		break;
 	case OTG_STATE_B_WAIT_ACON:
 	case OTG_STATE_B_HOST:
 	case OTG_STATE_B_PERIPHERAL:
 	case OTG_STATE_B_IDLE:
-		musb->xceiv->state = OTG_STATE_B_IDLE;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_B_IDLE);
 		break;
 	case OTG_STATE_B_SRP_INIT:
 		break;
@@ -2318,10 +2319,10 @@ __acquires(musb->lock)
 	 * or else after HNP, as A-Device
 	 */
 	if (devctl & MUSB_DEVCTL_BDEVICE) {
-		musb->xceiv->state = OTG_STATE_B_PERIPHERAL;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_B_PERIPHERAL);
 		musb->g.is_a_peripheral = 0;
 	} else {
-		musb->xceiv->state = OTG_STATE_A_PERIPHERAL;
+		usb_phy_chstate(musb->xceiv, OTG_STATE_A_PERIPHERAL);
 		musb->g.is_a_peripheral = 1;
 	}
 

@@ -176,9 +176,15 @@ enum musb_g_ep0_state {
 /****************************** FUNCTIONS ********************************/
 
 #define MUSB_HST_MODE(_musb)\
-	{ (_musb)->is_host = true; }
+	{ \
+		printk(KERN_NOTICE "%s:%d: MUSB_HST_MODE %s -> Host\n", \
+			__func__, __LINE__, MUSB_MODE(_musb)); \
+		(_musb)->is_host = true; }
 #define MUSB_DEV_MODE(_musb) \
-	{ (_musb)->is_host = false; }
+	{ \
+		printk(KERN_NOTICE "%s:%d: MUSB_HST_MODE %s -> Peripheral\n", \
+			__func__, __LINE__, MUSB_MODE(musb)); \
+		(_musb)->is_host = false; }
 
 #define test_devctl_hst_mode(_x) \
 	(musb_readb((_x)->mregs, MUSB_DEVCTL)&MUSB_DEVCTL_HM)

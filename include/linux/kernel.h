@@ -736,4 +736,5 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
 
 extern int do_sysinfo(struct sysinfo *info);
 
+#define MY_TRACE printk("%s:%d: %s()\n", __FILE__, __LINE__, __func__);
 #endif

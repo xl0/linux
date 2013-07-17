@@ -113,7 +113,7 @@ static int act8600_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		act8600_output_voltage_set(p->outnum, p->value);
 		act8600_output_enable(p->outnum, p->enable);
 
-		dprintk("%d\t\t%d\t\t%d\n", p->outnum, p->value, p->enable);
+		dprintk("%d\t\t%x\t\t%d\n", p->outnum, p->value, p->enable);
 	}
 
 	/* MtH: The bits changed by these writes are undocumented. */
@@ -130,6 +130,8 @@ int act8600_q_set(int q, bool enable)
 {
 	u8 tmp;
 	int ret;
+
+	printk(KERN_NOTICE "act8600_q_set(%d, %d)\n", q, enable);
 
 	if (q < 1 || q > 3)
 		return -EINVAL;

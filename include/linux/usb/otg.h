@@ -45,6 +45,25 @@ static inline const char *otg_state_string(enum usb_otg_state state)
 }
 #endif
 
+#define usb_phy_chstate(x, new_state) do { \
+		printk(KERN_NOTICE "%s:%d: usb_phy_state %s -> %s\n", \
+			__func__, __LINE__, \
+			otg_state_string(x->state), \
+			otg_state_string(new_state)); \
+		x->state = new_state; \
+	} while (0);
+
+#if 0
+static inline void usb_phy_chstate(struct usb_phy *x,
+	enum usb_otg_state new_state)
+{
+	printk(KERN_NOTICE "usb_phy_state %s -> %s\n",
+		otg_state_string(x->state),
+		otg_state_string(new_state));
+
+	x->state = new_state;
+}
+#endif
 /* Context: can sleep */
 static inline int
 otg_start_hnp(struct usb_otg *otg)

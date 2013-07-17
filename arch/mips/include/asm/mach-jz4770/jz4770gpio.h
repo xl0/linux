@@ -1091,6 +1091,7 @@ do {						\
 	__gpio_port_as_input(p, o);		\
 } while (0)
 
+/*
 #define __gpio_set_pin(n)			\
 do {						\
 	unsigned int p, o;			\
@@ -1098,7 +1099,10 @@ do {						\
 	o = (n) % 32;				\
 	REG_GPIO_PXPAT0S(p) = (1 << o);		\
 } while (0)
+*/
 
+#define __gpio_set_pin(n)      __gpio_as_output1(n)
+/*
 #define __gpio_clear_pin(n)			\
 do {						\
 	unsigned int p, o;			\
@@ -1106,7 +1110,8 @@ do {						\
 	o = (n) % 32;				\
 	REG_GPIO_PXPAT0C(p) = (1 << o);		\
 } while (0)
-
+*/
+#define __gpio_clear_pin(n)    __gpio_as_output0(n)
 #define __gpio_get_pin(n)			\
 ({						\
 	unsigned int p, o, v;			\

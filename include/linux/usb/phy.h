@@ -160,6 +160,7 @@ usb_phy_shutdown(struct usb_phy *x)
 		x->shutdown(x);
 }
 
+
 /* for usb host and peripheral controller drivers */
 #ifdef CONFIG_USB_OTG_UTILS
 extern struct usb_phy *usb_get_phy(enum usb_phy_type type);
